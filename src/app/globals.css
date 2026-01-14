@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #00eaff;
+  --secondary: #9d00ff;
+  --danger: #ff0055;
+  --success: #00ff66;
+  --warning: #ffcc00;
+  --panel: #111;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: sans-serif;
+  
+  /* GENEL KURAL: Sayfadaki her şeyin yazısı varsayılan olarak beyaz olsun */
+  color: white; 
+}
+
+body {
+  background: #000 url('https://images.unsplash.com/photo-1519681393798-38e43269d877?q=80&w=1000') center/cover no-repeat fixed;
+}
+
+/* --- KESİN ÇÖZÜM: GİRİŞ KUTULARI --- */
+/* Arka plan koyu gri, YAZI BEMBEYAZ */
+input {
+  background-color: #1a1a1a !important; /* Koyu zemin */
+  color: #ffffff !important;           /* BEYAZ YAZI (Kesin) */
+  border: 2px solid #444 !important;
+  padding: 15px !important;
+  font-size: 20px !important;
+  border-radius: 10px !important;
+  outline: none !important;
+  transition: 0.3s;
+}
+
+/* Tıklayınca parlasın */
+input:focus {
+  border-color: #00eaff !important;
+  background-color: #000 !important;
+  box-shadow: 0 0 15px rgba(0, 234, 255, 0.3);
+}
+
+/* Placeholder (İpucu yazısı) rengi gri olsun */
+input::placeholder {
+  color: #888 !important;
+}
+
+/* Animasyonlar */
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} }
+.animate-shake { animation: shake 0.3s; }
+
+@keyframes pop { 0%{transform: scale(0.9);} 50%{transform: scale(1.05);} 100%{transform: scale(1);} }
+.animate-pop { animation: pop 0.2s forwards; }
+
+@keyframes flyUp { from{top: 40%; opacity:1;} to{top: 20%; opacity:0;} }
+.animate-flyUp { animation: flyUp 1s forwards; }
