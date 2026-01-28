@@ -10,7 +10,6 @@ const BASE_HEIGHT = 850;
 const FALLBACK_ARENA_BG = "https://images.unsplash.com/photo-1516912481808-3406841bd33c?q=80&w=1000";
 
 // --- YENİ SORULAR EKLENMİŞ HAVUZ ---
-// Mevcut qPool'u genişletiyoruz.
 const expandedQPool = {
     ...qPool,
     all: [
@@ -41,14 +40,11 @@ const calcStats = (p: Player | null) => {
 // ŞIK KARIŞTIRICI FONKSİYON
 const shuffleQuestions = (qs: Question[]) => {
     return qs.map(q => {
-        // Şıklar ve orijinal indexlerini paketle
         const optionsWithIndex = q.o.map((opt, i) => ({ val: opt, originalIndex: i }));
-        // Karıştır (Fisher-Yates)
         for (let i = optionsWithIndex.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
         }
-        // Yeni doğru cevabı bul
         const newAnswerIndex = optionsWithIndex.findIndex(item => item.originalIndex === q.a);
         return { ...q, o: optionsWithIndex.map(item => item.val), a: newAnswerIndex };
     });
@@ -101,21 +97,24 @@ export default function Game() {
 
   const [shopMode, setShopMode] = useState<'buy' | 'joker' | 'sell'>('buy');
   const [leaderboard, setLeaderboard] = useState<{name:string, score:number}[]>([]);
-  const [userRank, setUserRank] = useState<number | null>(null); // Kullanıcının sırası
+  const [userRank, setUserRank] = useState<number | null>(null);
   const [arenaSearching, setArenaSearching] = useState(false);
 
-  // --- SES SİSTEMİ ---
+  // --- YENİ SES SİSTEMİ (Online Linkler) ---
   const playSound = (type: 'click' | 'correct' | 'wrong' | 'win') => {
     if (isMuted) return;
+    
+    // İnternetten çalışan hazır ses linkleri
     const sounds = {
-        'click': '/sounds/tik.mp3',
-        'correct': '/sounds/dogru.mp3',
-        'wrong': '/sounds/yanlis.mp3',
-        'win': '/sounds/zafer.mp3'
+        'click': 'https://cdn.pixabay.com/audio/2022/03/15/audio_c8c8a73467.mp3', // Baloncuk sesi
+        'correct': 'https://cdn.pixabay.com/audio/2021/08/04/audio_12b0c7443c.mp3', // Başarı sesi
+        'wrong': 'https://cdn.pixabay.com/audio/2022/03/10/audio_c230d7b132.mp3', // Hata sesi
+        'win': 'https://cdn.pixabay.com/audio/2021/08/09/audio_88447e769f.mp3' // Seviye atlama sesi
     };
+
     const audio = new Audio(sounds[type]);
-    audio.volume = 0.4; 
-    audio.play().catch(e => {}); // Dosya yoksa hata verme
+    audio.volume = 0.5; 
+    audio.play().catch(e => console.log("Ses çalma hatası (Tarayıcı engellemiş olabilir):", e));
   };
 
   const notify = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -167,20 +166,11 @@ export default function Game() {
   // BOT MANTIĞI (Arena)
   useEffect(() => {
       if (screen === 'battle' && battle.active && battle.isArena && isBotMatch && turn === 'p2' && !battle.isTransitioning) {
-          // Bot düşünme süresi (Zorluğa göre değişir)
           const thinkTime = Math.max(1000, botDifficulty.speed - (Math.random() * 1000));
-          
           const botTimer = setTimeout(() => {
-              // Bot doğru bilecek mi?
               const isCorrect = Math.random() < botDifficulty.acc;
-              
-              if (isCorrect) {
-                   // Bot doğru bildi
-                   handleBotMove('correct');
-              } else {
-                   // Bot yanlış bildi
-                   handleBotMove('wrong');
-              }
+              if (isCorrect) handleBotMove('correct');
+              else handleBotMove('wrong');
           }, thinkTime);
           return () => clearTimeout(botTimer);
       }
@@ -188,29 +178,11 @@ export default function Game() {
 
   const handleBotMove = (move: 'correct' | 'wrong') => {
       if (!battle.active) return;
-      const myMove = 'resolving'; // Bekleme
-      // Round'u çöz
-      // Eğer oyuncu daha cevap vermediyse beklemez, çünkü sıra tabanlı yaptık.
-      // Bot hamlesini yaptı, şimdi sıra oyuncuya geçmez, sonuç hesaplanır.
-      // V3'teki mantık: Herkes kendi ekranında hamle yapar.
-      // Burada bot simülasyonu için basitçe: Bot hamlesini sunucuya yazmış gibi davranacağız.
       resolveRoundBot(move);
   };
 
   const resolveRoundBot = (botMove: string) => {
-      // Bu fonksiyon bot oynadığında çalışmaz, bot sadece move bilgisini tutar.
-      // Sıra tabanlı: P1 oynar -> P2 (Bot) oynar.
-      // Biz P1 olarak oynadık, sıra P2'ye geçti.
-      // P2 (Bot) şimdi oynadı.
-      
-      // Oyuncunun son hamlesi neydi?
-      // Basitleştirmek için: Bot maçında sıra bekleme yok, eş zamanlı değil sıra tabanlı olsun.
-      // P1 Cevaplar -> Sonuç -> P2 Cevaplar -> Sonuç (Klasik RPG)
-      // AMA V3 yapımız eş zamanlı (taş kağıt makas gibi).
-      
-      // Bot simülasyonu için hile yapıyoruz:
-      // Oyuncu cevabını verdiğinde, bot o an karar vermiş gibi sonucu hemen hesaplayacağız.
-      // O yüzden yukarıdaki useEffect'e gerek yok, handleAnswer içinde halledeceğiz.
+       // Bu kısım handleAnswer içinde işleniyor
   };
 
   // LİDERLİK TABLOSU
@@ -221,9 +193,7 @@ export default function Game() {
               const data = snapshot.val();
               const list = Object.values(data) as {name:string, score:number}[];
               list.sort((a, b) => b.score - a.score);
-              setLeaderboard(list.slice(0, 50)); // İlk 50
-              
-              // Kendi sıranı bul
+              setLeaderboard(list.slice(0, 50));
               if(player) {
                   const myRank = list.findIndex(u => u.name === player.name);
                   setUserRank(myRank + 1);
@@ -275,27 +245,17 @@ export default function Game() {
     setPlayer({...p});
   };
 
-  // --- BOT ZORLUK AYARLAYICI ---
   const calculateBotStats = (playerScore: number) => {
-      // Puan arttıkça bot zorlaşır
-      // 0 Puan: %50 doğruluk, 5sn hız
-      // 1000 Puan: %70 doğruluk, 3sn hız
-      // 5000 Puan: %90 doğruluk, 1.5sn hız
-      
       let accuracy = 0.5 + (playerScore / 10000); 
       if (accuracy > 0.95) accuracy = 0.95;
-
       let speed = 5000 - (playerScore * 0.5);
       if (speed < 1500) speed = 1500;
-
       let name = "Acemi Çırak";
       let itemLvl = 0;
-
       if(playerScore > 500) { name = "Köy Ozanı"; itemLvl = 1; }
       if(playerScore > 1500) { name = "Saray Katibi"; itemLvl = 2; }
       if(playerScore > 3000) { name = "Divan Şairi"; itemLvl = 3; }
       if(playerScore > 5000) { name = "Edebiyat Üstadı"; itemLvl = 4; }
-
       return { acc: accuracy, speed, name, itemLvl };
   };
 
@@ -304,7 +264,6 @@ export default function Game() {
       playSound('click');
       setArenaSearching(true);
       
-      // BOT AKTİVASYONU: 5 Saniye içinde rakip bulamazsa bot ata
       const botTimeout = setTimeout(() => {
           setArenaSearching(false);
           startBotMatch();
@@ -320,9 +279,8 @@ export default function Game() {
           for (const rId in rooms) {
               if (rooms[rId].status === 'waiting') {
                   const host = rooms[rId].p1;
-                  // Basit eşleştirme
                   if (true) { 
-                      clearTimeout(botTimeout); // Bot iptal
+                      clearTimeout(botTimeout);
                       const updates: any = {};
                       updates[`arena_rooms/${rId}/p2`] = { name: player.name, hp: myStats.maxHp, maxHp: myStats.maxHp, score: player.score };
                       updates[`arena_rooms/${rId}/status`] = 'playing';
@@ -342,9 +300,6 @@ export default function Game() {
           if (newRoomId) {
               await set(newRoomRef, { p1: { name: player.name, hp: myStats.maxHp, maxHp: myStats.maxHp, score: player.score }, status: 'waiting' });
               setRoomID(newRoomId); setPlayerSide('p1'); listenToRoom(newRoomId, 'p1');
-              // Bot timeout burada da çalışıyor, eğer p2 gelmezse 5sn sonra iptal edip bot başlatabiliriz
-              // Ama basitlik için şimdilik sadece arayan kişi için bot başlattık.
-              // Kurucu beklerken bot gelmesi için ayrı logic lazım, şimdilik basit tutalım.
           }
       }
   };
@@ -354,21 +309,14 @@ export default function Game() {
       setIsBotMatch(true);
       const botStats = calculateBotStats(player.score);
       setBotDifficulty(botStats);
-      
       const myStats = calcStats(player);
-      
-      // Bot için sanal ortam
       setBattle({
-          active: true,
-          isArena: true,
+          active: true, isArena: true,
           region: { id:'arena', name:'Online Arena', desc:'', x:0, y:0, type:'all', bg:'/arena_bg.png', levels:[] },
           level: { id:'bot', t:'Bot Savaşı', hp: myStats.maxHp, en: botStats.name + ` (Eşya: +${botStats.itemLvl})`, ico:'🤖', diff:'PvE', isBoss:true },
-          qs: shuffleQuestions([...expandedQPool.all]).slice(0, 10), // 10 Soru
-          qIndex: 0,
-          enemyHp: myStats.maxHp, // Bot canı bizimkiyle aynı olsun
-          maxEnemyHp: myStats.maxHp,
-          timer: 20,
-          combo: 0, shaking: false, fiftyUsed: false, dmgText: null, isTransitioning: false
+          qs: shuffleQuestions([...expandedQPool.all]).slice(0, 10),
+          qIndex: 0, enemyHp: myStats.maxHp, maxEnemyHp: myStats.maxHp,
+          timer: 20, combo: 0, shaking: false, fiftyUsed: false, dmgText: null, isTransitioning: false
       });
       setScreen('battle');
       notify(`Rakip: ${botStats.name}`, "success");
@@ -397,7 +345,6 @@ export default function Game() {
               }
               setTurn(data.turn);
               const currentQ = expandedQPool.all[data.questionIndex || 0];
-              // Online'da shuffle yapmıyoruz ki iki taraf aynı şıkkı görsün (senkron sorunu olmasın)
               setBattle(prev => ({
                   ...prev, active: true, isArena: true, enemyHp: enemy.hp, maxEnemyHp: enemy.maxHp,
                   region: { id:'arena', name:'Online Arena', desc:'', x:0, y:0, type:'all', bg:'/arena_bg.png', levels:[] },
@@ -411,23 +358,13 @@ export default function Game() {
   };
 
   const handleAnswer = (correct: boolean) => {
-    if (!player || battle.isTransitioning) return; // Geçiş varsa tıklamayı engelle
-    
-    // DELAY EKLEME: Önce sonucu göster, 1.5sn sonra işlemi yap
-    // Bot maçında veya hikayede delay olsun
-    // Online gerçek PvP'de delay olmasın (senkron kaymasın diye)
-    
+    if (!player || battle.isTransitioning) return;
     if (correct) playSound('correct'); else playSound('wrong');
 
     if (!battle.isArena || isBotMatch) {
-        setBattle(prev => ({ ...prev, isTransitioning: true })); // Butonları kilitle
-        
-        // Görsel efekt için bekleme
-        setTimeout(() => {
-            processAnswer(correct);
-        }, 1500);
+        setBattle(prev => ({ ...prev, isTransitioning: true }));
+        setTimeout(() => { processAnswer(correct); }, 1500);
     } else {
-        // Online PvP'de bekleme yok
         processAnswer(correct);
     }
   };
@@ -439,37 +376,30 @@ export default function Game() {
       if (nb.isArena && isBotMatch) {
           const myDmg = calcStats(player!).atk;
           const botStats = botDifficulty;
-          
           if (correct) {
               nb.enemyHp -= myDmg;
               nb.dmgText = { val: myDmg, color: '#00ff66', id: Date.now() };
           } else {
               nb.shaking = true;
           }
-
-          // Bot da saldırıyor (Simüle ediyoruz)
-          // Botun vurup vurmadığını burada hesaplayalım
           const botHits = Math.random() < botStats.acc;
           if (botHits) {
               const botDmg = 30 + (botStats.itemLvl * 10);
               const np = {...player!};
               np.hp -= botDmg;
               setPlayer(np);
-              // Eğer öldüysek
               if (np.hp <= 0) {
                   np.hp = calcStats(np).maxHp; saveGame(np);
                   setBattle({...nb, active:false}); notify("KAYBETTİN...", "error"); setScreen('menu'); return;
               }
           }
-
           if (nb.enemyHp <= 0) {
               playSound('win');
               const np = {...player!}; np.score += 50; np.gold += 50; np.hp = calcStats(np).maxHp; saveGame(np);
               setBattle({...nb, active:false}); notify("BOTU YENDİN! +50 SKOR", "success"); setScreen('menu'); return;
           }
-          
           nb.qIndex++; 
-          if(nb.qIndex >= nb.qs.length) nb.qIndex = 0; // Sorular biterse başa dön
+          if(nb.qIndex >= nb.qs.length) nb.qIndex = 0;
           nb.timer = 20; 
           setBattle(nb);
           return;
@@ -477,10 +407,7 @@ export default function Game() {
 
       // --- ONLINE PVP MANTIĞI ---
       if (nb.isArena && roomID && playerSide) {
-           // ... Eski online logic aynı kalıyor ...
-           // Burayı kısa tutuyorum, mantık aynı
            if (turn !== playerSide) return;
-           const myDmg = calcStats(player!).atk;
            const myMove = correct ? 'correct' : 'wrong';
            const updates: any = {};
            updates[`arena_rooms/${roomID}/${playerSide}_move`] = myMove;
@@ -533,7 +460,6 @@ export default function Game() {
 
       if (np.hp <= 0) { np.hp = 20; saveGame(np); setBattle({...nb, active:false}); notify("KAYBETTİN!", "error"); setScreen('menu'); return; }
       if (!correct || nb.enemyHp > 0) { nb.qIndex++; nb.timer=20; nb.fiftyUsed=false; }
-      // Sorular biterse tekrar karıştırıp başa sar (Sonsuz döngü)
       if (nb.qIndex >= nb.qs.length) {
           nb.qs = shuffleQuestions(nb.qs);
           nb.qIndex = 0;
@@ -542,7 +468,6 @@ export default function Game() {
   };
 
   const resolveRoundOnline = async (p2LastMove: string) => {
-      // V3'teki kodun aynısı
       const roomRef = ref(db, `arena_rooms/${roomID}`);
       const snapshot = await get(roomRef);
       const data = snapshot.val();
@@ -592,16 +517,10 @@ export default function Game() {
   const startBattle = (r: Region, l: Level) => {
     playSound('click');
     setShowRegionModal(false);
-    
-    // 1. Soruları çek
     let rawQs = r.type === 'all' ? [...expandedQPool.all] : [...(expandedQPool[r.type] || [])];
-    // 2. Çoğalt (Oyun hemen bitmesin)
     rawQs = [...rawQs, ...rawQs]; 
-    // 3. Soruları karıştır
     rawQs.sort(() => Math.random() - 0.5);
-    // 4. Şıkları karıştır
     const shuffledQs = shuffleQuestions(rawQs);
-    
     setBattle({
       active: true, region: r, level: l, qs: shuffledQs, qIndex: 0,
       enemyHp: l.hp, maxEnemyHp: l.hp, timer: 20, combo: 0,
@@ -644,7 +563,7 @@ export default function Game() {
     <>
       <NotificationComponent />
       
-      {/* SES KONTROL BUTONU (SOL ÜST) */}
+      {/* SES KONTROL BUTONU */}
       <div style={{position:'fixed', top:'10px', left:'10px', zIndex:99999, background:'rgba(0,0,0,0.5)', borderRadius:'50%', padding:'10px', cursor:'pointer'}} onClick={()=>setIsMuted(!isMuted)}>
           <span style={{fontSize:'30px'}}>{isMuted ? '🔇' : '🔊'}</span>
       </div>
